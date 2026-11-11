@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Высота — апартаменты в небоскрёбе</title>
+<meta name="description" content="Демо-сайт жилого комплекса: 3D-небоскрёб на Three.js с выбором этажа, подбор квартир и ипотечный калькулятор.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#05070d;--card:rgba(255,255,255,.04);--line:rgba(255,255,255,.1);--txt:#eef2fa;--soft:#8a93a8;--gold:#f2c46d;--blue:#6aa8ff;--ok:#5fe0a0;--busy:#ff7a7a}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font:400 16px/1.6 Onest,-apple-system,Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.syne{font-family:Syne,Onest,sans-serif}
+header{position:fixed;inset:0 0 auto;z-index:30}
+header .wrap{display:flex;justify-content:space-between;align-items:center;height:76px}
+.logo{font:800 22px Syne,sans-serif;letter-spacing:.2em;text-decoration:none}
+.logo b{color:var(--gold)}
+nav a{color:var(--soft);text-decoration:none;margin-left:28px;font-size:15px}
+nav a:hover{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#1a1205;border:0;border-radius:12px;padding:15px 26px;font:600 16px Onest,sans-serif;cursor:pointer;text-decoration:none;transition:transform .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(242,196,109,.3)}
+.btn.ghost{background:rgba(255,255,255,.06);color:var(--txt);border:1px solid var(--line)}
+
+.hero{position:relative;height:100vh;min-height:720px;overflow:hidden;background:radial-gradient(1200px 700px at 70% 20%,#16213d,#070a14 60%,#04050a)}
+#gl{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+.hero .wrap{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;pointer-events:none}
+.hero .wrap>*{pointer-events:auto}
+.over{color:var(--gold);font-size:13px;letter-spacing:.25em;text-transform:uppercase;margin-bottom:20px}
+h1{font:800 clamp(44px,7vw,100px)/.95 Syne,sans-serif;letter-spacing:-.03em;max-width:620px}
+h1 span{background:linear-gradient(180deg,#fff,#7f8db3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--soft);font-size:clamp(16px,1.6vw,19px);max-width:430px;margin:24px 0 30px}
+.floorbox{position:absolute;z-index:3;right:max(20px,calc((100vw - 1240px)/2 + 20px));bottom:40px;width:320px;background:rgba(10,14,26,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:20px;padding:20px}
+.floorbox .n{font:800 46px/1 Syne,sans-serif}
+.floorbox .n small{font:500 15px Onest,sans-serif;color:var(--soft)}
+.floorbox p{color:var(--soft);font-size:14px;margin:6px 0 12px}
+.floorbox input{width:100%;accent-color:var(--gold)}
+.hint{color:var(--soft);font-size:12px;margin-top:8px}
+
+section{padding:110px 0}
+.kick{color:var(--gold);font-size:13px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:12px}
+h2{font:800 clamp(34px,5vw,64px)/1 Syne,sans-serif;letter-spacing:-.02em;margin-bottom:16px}
+.sub{color:var(--soft);max-width:540px;margin-bottom:36px}
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:22px}
+.chip{background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:9px 16px;font:500 14px Onest,sans-serif;cursor:pointer}
+.chip.on{background:var(--txt);color:var(--bg)}
+.pr{display:flex;align-items:center;gap:12px;flex:1;min-width:240px}
+.pr input{flex:1;accent-color:var(--gold)}
+.pr b{white-space:nowrap}
+.count{color:var(--soft);font-size:14px;margin-bottom:16px}
+.count b{color:var(--gold)}
+.apts{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.apt{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;cursor:pointer;transition:border-color .2s,transform .2s;animation:up .45s both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+.apt:hover{border-color:rgba(242,196,109,.5);transform:translateY(-3px)}
+.apt.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,196,109,.15)}
+.apt.busy{opacity:.45;cursor:not-allowed}
+.plan{height:130px;border-radius:14px;background:#0a0e1a;margin-bottom:14px;display:block;width:100%}
+.apt .top{display:flex;justify-content:space-between;align-items:center}
+.apt h3{font:700 20px Syne,sans-serif}
+.st{font-size:12px;padding:3px 10px;border-radius:999px;background:rgba(95,224,160,.12);color:var(--ok)}
+.busy .st{background:rgba(255,122,122,.12);color:var(--busy)}
+.apt .meta{color:var(--soft);font-size:14px;margin:4px 0 10px}
+.apt .price{font:700 22px Syne,sans-serif}
+.apt .m2{color:var(--soft);font-size:13px}
+.empty{color:var(--soft);padding:40px;text-align:center;border:1px dashed var(--line);border-radius:20px}
+
+.mort{display:grid;grid-template-columns:1.1fr 1fr;gap:24px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:28px}
+label{display:flex;justify-content:space-between;color:var(--soft);font-size:14px;margin:16px 0 6px}
+label b{color:var(--txt)}
+.panel input[type=range]{width:100%;accent-color:var(--gold)}
+.res{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:center}
+#donut{width:200px;height:200px}
+.pay{font:800 clamp(34px,4vw,48px)/1 Syne,sans-serif;color:var(--gold)}
+.lg{display:grid;gap:8px;margin-top:18px;font-size:14px}
+.lg div{display:flex;justify-content:space-between;gap:10px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--soft);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+@media(max-width:900px){nav a{display:none}.hero .wrap{justify-content:flex-start;padding-top:110px}.floorbox{left:16px;right:16px;width:auto;bottom:20px}.mort{grid-template-columns:1fr}.res{grid-template-columns:1fr;justify-items:center;text-align:center}section{padding:80px 0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/addons/"}}</script>
+</head>
+<body>
+<header><div class="wrap"><a class="logo" href="#">ВЫСО<b>ТА</b></a><nav><a href="#flats">Квартиры</a><a href="#mortgage">Ипотека</a><a class="btn ghost" href="#flats" style="padding:10px 18px;font-size:14px">Подобрать</a></nav></div></header>
+
+<section class="hero" style="padding:0">
+  <canvas id="gl"></canvas>
+  <div class="wrap">
+    <div class="over">Апартаменты · 40 этажей · сдача 2027</div>
+    <h1><span>Жить выше</span> облаков</h1>
+    <p class="lead">Панорамные окна, вид на весь город и лобби с консьержем. Выберите этаж прямо на башне.</p>
+    <div><a class="btn" href="#flats">Смотреть квартиры →</a></div>
+  </div>
+  <div class="floorbox">
+    <div class="n" id="fN">27 <small>этаж</small></div>
+    <p id="fInfo">—</p>
+    <input type="range" id="fR" min="2" max="40" value="27" aria-label="Этаж">
+    <div class="hint">Нажмите на этаж башни или двигайте ползунок</div>
+  </div>
+</section>
+
+<section id="flats"><div class="wrap">
+  <div class="kick reveal">Подбор</div>
+  <h2 class="reveal">Квартиры</h2>
+  <p class="sub reveal">Фильтр подсвечивает подходящие этажи на 3D-башне. Нажмите на квартиру, и её цена попадёт в ипотечный калькулятор.</p>
+  <div class="filters reveal">
+    <div id="rooms" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <div class="pr"><span style="color:var(--soft);font-size:14px">до</span><input type="range" id="maxP" min="15" max="120" value="120" step="5"><b id="maxPV"></b></div>
+    <button class="chip" id="allF">Все этажи</button>
+  </div>
+  <div class="count" id="count"></div>
+  <div class="apts" id="apts"></div>
+</div></section>
+
+<section id="mortgage" style="padding-top:0"><div class="wrap">
+  <div class="kick reveal">Калькулятор</div>
+  <h2 class="reveal">Ипотека</h2>
+  <p class="sub reveal">Аннуитетный платёж, как в банке. Все поля пересчитываются сразу.</p>
+  <div class="mort reveal">
+    <div class="panel">
+      <label>Стоимость <b id="vP"></b></label><input type="range" id="mP" min="10" max="150" step=".1" value="38">
+      <label>Первый взнос <b id="vD"></b></label><input type="range" id="mD" min="10" max="90" value="20">
+      <label>Ставка <b id="vR"></b></label><input type="range" id="mR" min="3" max="25" step=".1" value="16">
+      <label>Срок <b id="vY"></b></label><input type="range" id="mY" min="5" max="30" value="20">
+    </div>
+    <div class="panel res">
+      <canvas id="donut" width="400" height="400"></canvas>
+      <div><div style="color:var(--soft)">Платёж в месяц</div><div class="pay" id="pay"></div>
+        <div class="lg"><div><span><i style="background:#6aa8ff"></i>Кредит</span><b id="lC"></b></div><div><span><i style="background:#f2c46d"></i>Переплата</span><b id="lO"></b></div><div><span><i style="background:#3a4560"></i>Первый взнос</span><b id="lD"></b></div></div></div>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap"><div><b style="color:var(--txt)">ВЫСОТА</b> — демо-проект для портфолио: ЖК, цены и планировки вымышленные.<br>3D-башня на Three.js с выбором этажа, подбор и калькулятор на JavaScript.</div><div>Сделал Лев · <a href="https://github.com/davnat0111-gif">GitHub</a> · <a href="https://t.me/Levont1y_1">Telegram</a></div></div></footer>
+
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+const FLOORS=40,FH=.42;
+const canvas=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x070a14,.018);
+const camera=new THREE.PerspectiveCamera(34,1,.1,400);
+{const env=new THREE.Scene();env.background=new THREE.Color(0x0a0f1e);
+ const box=(w,h,c,i,p)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(c).multiplyScalar(i),side:2}));m.position.set(...p);m.lookAt(0,0,0);env.add(m)};
+ box(10,2,0x6a88cc,1.4,[0,6,0]);box(2,8,0xffc070,1.2,[-6,0,2]);box(8,3,0x203050,1,[0,-1,7]);
+ scene.environment=new THREE.PMREMGenerator(renderer).fromScene(env,.04).texture}
+// Текстура окон: часть горит тёплым светом
+function winTex(cols,rows,lit,seed){const c=document.createElement('canvas');c.width=cols*16;c.height=rows*16;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,c.width,c.height);
+ let s=seed;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+ for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){if(r()<lit){const w=r();g.fillStyle=w<.7?`rgb(255,${190+r()*40|0},${110+r()*50|0})`:'rgb(170,200,255)';g.globalAlpha=.4+r()*.6;g.fillRect(x*16+3,y*16+4,10,9)}}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
+// Башня
+const tower=new THREE.Group();scene.add(tower);
+const floors=[];const slabMat=new THREE.MeshStandardMaterial({color:0x1a2235,metalness:.6,roughness:.4});
+for(let i=0;i<FLOORS;i++){const k=1-i/FLOORS*.18;const w=3.2*k,d=2.4*k;
+ const f=new THREE.Group();f.position.y=i*FH;f.rotation.y=i*.018;tower.add(f);
+ const tex=winTex(24,2,.55,i*97+11);tex.wrapS=THREE.RepeatWrapping;
+ const mat=new THREE.MeshPhysicalMaterial({color:0x0e1626,metalness:.2,roughness:.08,emissive:0xffffff,emissiveMap:tex,emissiveIntensity:.9,clearcoat:1,envMapIntensity:1.4});
+ const glass=new THREE.Mesh(new THREE.BoxGeometry(w,FH*.86,d),mat);glass.position.y=FH*.43;glass.userData.floor=i+1;f.add(glass);
+ const slab=new THREE.Mesh(new THREE.BoxGeometry(w+.12,FH*.14,d+.12),slabMat);f.add(slab);
+ floors.push({g:f,mat,glass})}
+const crown=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,3,8),new THREE.MeshBasicMaterial({color:0xffffff}));crown.position.y=FLOORS*FH+1.5;tower.add(crown);
+const beacon=new THREE.Mesh(new THREE.SphereGeometry(.09,16,8),new THREE.MeshBasicMaterial({color:0xff4040}));beacon.position.y=FLOORS*FH+3;tower.add(beacon);
+// Подсветка выбранного этажа: светящееся кольцо
+const ring=new THREE.Mesh(new THREE.BoxGeometry(3.5,.05,2.7),new THREE.MeshBasicMaterial({color:0xf2c46d}));
+const ringEdges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.4,FH*.9,2.6)),new THREE.LineBasicMaterial({color:0xf2c46d}));
+tower.add(ringEdges);ring.visible=false;
+// Город вокруг
+const cityTex=winTex(8,16,.3,7);cityTex.wrapS=cityTex.wrapT=THREE.RepeatWrapping;
+const cityMat=new THREE.MeshStandardMaterial({color:0x0b101c,roughness:.6,metalness:.3,emissive:0xffffff,emissiveMap:cityTex,emissiveIntensity:.55});
+const B=420,city=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1).translate(0,.5,0),cityMat,B);
+const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();let n=0;
+for(let x=-14;x<=14;x++)for(let z=-14;z<=14;z++){if(n>=B)break;const r=Math.hypot(x,z);if(r<3||Math.random()<.5)continue;
+ const h=(.6+Math.random()*Math.random()*7)*Math.max(.35,1-r/18);v.set(x*2.2+(Math.random()-.5),0,z*2.2+(Math.random()-.5));sc.set(1+Math.random()*.8,h,1+Math.random()*.8);
+ m4.compose(v,q,sc);city.setMatrixAt(n++,m4)}
+city.count=n;scene.add(city);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshStandardMaterial({color:0x05070d,roughness:.25,metalness:.8}));ground.rotation.x=-Math.PI/2;scene.add(ground);
+// Огни дорог
+const L=900,lp=new Float32Array(L*3);for(let i=0;i<L;i++){const a=i%2;const line=(Math.floor(Math.random()*13)-6)*2.2+1.1;const t=(Math.random()-.5)*60;lp[i*3]=a?line:t;lp[i*3+1]=.05;lp[i*3+2]=a?t:line}
+const lights=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(lp,3)),new THREE.PointsMaterial({color:0xffb860,size:.12,transparent:true,opacity:.8}));scene.add(lights);
+const S=800,sp=new Float32Array(S*3);for(let i=0;i<S;i++){const a=Math.random()*Math.PI*2,e=Math.random()*.9+.1;sp[i*3]=Math.cos(a)*150*Math.cos(e);sp[i*3+1]=Math.sin(e)*150;sp[i*3+2]=Math.sin(a)*150*Math.cos(e)}
+scene.add(new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(sp,3)),new THREE.PointsMaterial({color:0xffffff,size:.5,fog:false})));
+scene.add(new THREE.AmbientLight(0x8090c0,.4));const moon=new THREE.DirectionalLight(0xaabbff,1.2);moon.position.set(-10,20,10);scene.add(moon);
+const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(new UnrealBloomPass(new THREE.Vector2(1,1),.55,.6,.55));composer.addPass(new OutputPass());
+
+let wide=true,dist=26;
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);composer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();wide=w/h>1.2;dist=wide?34:Math.max(40,22/(w/h))}
+addEventListener('resize',resize);resize();
+
+// Выбор этажа
+let sel=27,hover=null,matchSet=null;let camY=sel*FH;
+window.addEventListener('vysota:floor',e=>{sel=e.detail});
+window.addEventListener('vysota:match',e=>{matchSet=e.detail});
+const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();let downX=0,drag=0,yaw=.6,yawT=.6;
+canvas.addEventListener('pointerdown',e=>{downX=e.clientX;drag=0;canvas.style.cursor='grabbing'});
+addEventListener('pointerup',()=>canvas.style.cursor='grab');
+canvas.addEventListener('pointermove',e=>{
+ if(e.buttons){yawT-=(e.movementX||0)*.006;drag+=Math.abs(e.movementX||0)}
+ const r=canvas.getBoundingClientRect();ptr.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+ ray.setFromCamera(ptr,camera);const h=ray.intersectObjects(floors.map(f=>f.glass))[0];hover=h?h.object.userData.floor:null;canvas.style.cursor=hover?'pointer':'grab'});
+canvas.addEventListener('click',()=>{if(hover&&hover>=2&&drag<6)dispatchEvent(new CustomEvent('vysota:pick',{detail:hover}))});
+let vis=true;new IntersectionObserver(([e])=>vis=e.isIntersecting).observe(canvas);
+const clk=new THREE.Clock();let t=0;
+(function frame(){requestAnimationFrame(frame);if(!vis)return;const dt=Math.min(clk.getDelta(),.05);t+=dt;
+ yawT+=dt*.04;yaw+=(yawT-yaw)*.06;
+ const target=Math.min(sel*FH,12);camY+=(target-camY)*.05;
+ const cx=wide?-5.5:0;
+ camera.position.set(Math.sin(yaw)*dist,camY+7+(wide?0:3),Math.cos(yaw)*dist);
+ const look=new THREE.Vector3(0,camY+(wide?0:-1.5),0);
+ const right=new THREE.Vector3().subVectors(look,camera.position).cross(camera.up).normalize();
+ camera.lookAt(look.clone().addScaledVector(right,cx*.6));
+ floors.forEach((f,i)=>{const fl=i+1;const m=matchSet&&matchSet.has(fl);const target=fl===sel?2.6:fl===hover?1.8:m?1.5:matchSet?.35:.9;
+  f.mat.emissiveIntensity+=(target-f.mat.emissiveIntensity)*.12;f.mat.emissive.setHex(fl===sel?0xffd28a:m?0xbfe0ff:0xffffff)});
+ const sf=floors[sel-1].g;ringEdges.position.y=sf.position.y+FH*.43;ringEdges.rotation.y=sf.rotation.y;const k=1-(sel-1)/FLOORS*.18;ringEdges.scale.set(k*1.0,1,k*1.0);
+ beacon.material.color.setHSL(0,1,Math.sin(t*3)>0?.55:.15);
+ composer.render()})();
+</script>
+
+<script>
+const $=id=>document.getElementById(id);const mln=v=>(v/1e6).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн ₽';
+const rub=v=>Math.round(v).toLocaleString('ru-RU')+' ₽';
+// Детерминированная генерация квартир
+let seed=42;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const TYPES=[['Студия',0,24,34],['1-комн.',1,38,48],['2-комн.',2,58,74],['3-комн.',3,82,104]];
+const APTS=[];
+for(let f=2;f<=40;f++){const ppm=380000+f*6500;
+ if(f>=39){APTS.push({id:f+'-1',f,t:'Пентхаус',r:4,a:Math.round(180+rnd()*40),busy:rnd()<.3,ppm:ppm*1.35});continue}
+ const n=4+Math.floor(rnd()*3);for(let k=0;k<n;k++){const ty=TYPES[Math.floor(rnd()*4)];APTS.push({id:f+'-'+(k+1),f,t:ty[0],r:ty[1],a:Math.round(ty[2]+rnd()*(ty[3]-ty[2])),busy:rnd()<.28,ppm})}}
+APTS.forEach(a=>a.p=Math.round(a.a*a.ppm/10000)*10000);
+let rooms=new Set(),maxP=120,floorOnly=true,cur=27,selApt=null;
+const R=[['Студии',0],['1-комн.',1],['2-комн.',2],['3-комн.',3],['Пентхаусы',4]];
+$('rooms').innerHTML=R.map(([n,v])=>`<button class="chip" data-r="${v}">${n}</button>`).join('');
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const v=+b.dataset.r;rooms.has(v)?rooms.delete(v):rooms.add(v);b.classList.toggle('on');floorOnly=false;update()});
+$('maxP').oninput=()=>{maxP=+$('maxP').value;floorOnly=false;update()};
+$('allF').onclick=()=>{floorOnly=!floorOnly;update()};
+const fits=a=>(!rooms.size||rooms.has(a.r))&&a.p<=maxP*1e6;
+function setFloor(f,scroll){cur=f;$('fR').value=f;floorOnly=true;dispatchEvent(new CustomEvent('vysota:floor',{detail:f}));update();if(scroll)$('flats').scrollIntoView({behavior:'smooth'})}
+$('fR').oninput=()=>setFloor(+$('fR').value);
+addEventListener('vysota:pick',e=>setFloor(e.detail));
+function planSVG(a){const r=a.r,w=260,h=130;let s=`<svg class="plan" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="${w-16}" height="${h-16}" rx="6" fill="none" stroke="#6a7aa0" stroke-width="2"/>`;
+ const parts=Math.max(2,r+1);for(let i=1;i<parts;i++){const x=8+(w-16)*i/parts;s+=`<line x1="${x}" y1="8" x2="${x}" y2="${i%2?h*.62:h-8}" stroke="#6a7aa0" stroke-width="1.5"/>`}
+ s+=`<line x1="8" y1="${h-8}" x2="${w-8}" y2="${h-8}" stroke="#f2c46d" stroke-width="4"/><text x="${w-14}" y="${h-16}" fill="#f2c46d" font-size="10" text-anchor="end" font-family="sans-serif">панорамные окна</text></svg>`;return s}
+function update(){const list=APTS.filter(a=>fits(a)&&(!floorOnly||a.f===cur));
+ const freeF=APTS.filter(a=>a.f===cur&&!a.busy);
+ $('fN').innerHTML=`${cur} <small>этаж</small>`;$('fInfo').textContent=freeF.length?`Свободно ${freeF.length} кв. · от ${mln(Math.min(...freeF.map(a=>a.p)))}`:'Все квартиры забронированы';
+ $('maxPV').textContent=maxP>=120?'любая цена':mln(maxP*1e6);
+ $('allF').classList.toggle('on',!floorOnly);$('allF').textContent=floorOnly?`Только ${cur} этаж · показать все`:'Все этажи';
+ const free=list.filter(a=>!a.busy).length;
+ $('count').innerHTML=floorOnly?`Этаж ${cur}: <b>${free}</b> свободно из ${list.length}`:`Подходит <b>${free}</b> свободных квартир на <b>${new Set(list.filter(a=>!a.busy).map(a=>a.f)).size}</b> этажах`;
+ dispatchEvent(new CustomEvent('vysota:match',{detail:floorOnly&&!rooms.size&&maxP>=120?null:new Set(APTS.filter(a=>fits(a)&&!a.busy).map(a=>a.f))}));
+ const show=list.sort((a,b)=>a.busy-b.busy||a.p-b.p).slice(0,24);
+ $('apts').innerHTML=show.length?show.map((a,i)=>`<div class="apt${a.busy?' busy':''}${selApt===a.id?' sel':''}" data-id="${a.id}" style="animation-delay:${i*30}ms">${planSVG(a)}<div class="top"><h3>${a.t}</h3><span class="st">${a.busy?'Бронь':'Свободна'}</span></div><div class="meta">${a.a} м² · ${a.f} этаж · №${a.id}</div><div class="price">${mln(a.p)}</div><div class="m2">${rub(a.ppm)} за м²</div></div>`).join(''):'<div class="empty">Ничего не нашлось. Ослабьте фильтры.</div>';
+ document.querySelectorAll('.apt:not(.busy)').forEach(el=>el.onclick=()=>{const a=APTS.find(x=>x.id===el.dataset.id);selApt=a.id;$('mP').value=(a.p/1e6).toFixed(1);mort();update();$('mortgage').scrollIntoView({behavior:'smooth'})});
+ if(!floorOnly&&list.length){}}
+// Ипотека
+function mort(){const P=+$('mP').value*1e6,D=+$('mD').value/100,R=+$('mR').value/100/12,Y=+$('mY').value,n=Y*12;
+ const C=P*(1-D),pay=R?C*R/(1-Math.pow(1+R,-n)):C/n,over=pay*n-C;
+ $('vP').textContent=mln(P);$('vD').textContent=$('mD').value+'% · '+mln(P*D);$('vR').textContent=(+$('mR').value).toFixed(1)+'%';$('vY').textContent=Y+' лет';
+ $('pay').textContent=rub(pay);$('lC').textContent=mln(C);$('lO').textContent=mln(over);$('lD').textContent=mln(P*D);
+ const cv=$('donut'),g=cv.getContext('2d');g.clearRect(0,0,400,400);const parts=[[C,'#6aa8ff'],[over,'#f2c46d'],[P*D,'#3a4560']],tot=C+over+P*D;let a=-Math.PI/2;
+ parts.forEach(([v,c])=>{const s=v/tot*Math.PI*2;g.beginPath();g.arc(200,200,170,a+.02,a+s-.02);g.lineWidth=44;g.strokeStyle=c;g.lineCap='round';g.stroke();a+=s});
+ g.fillStyle='#8a93a8';g.font='500 26px Onest,sans-serif';g.textAlign='center';g.fillText('всего',200,185);g.fillStyle='#eef2fa';g.font='700 34px Syne,sans-serif';g.fillText(mln(tot).replace(' ₽',''),200,228)}
+['mP','mD','mR','mY'].forEach(id=>$(id).addEventListener('input',mort));
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+setFloor(27);mort();
+</script>
+</body>
+</html>
